@@ -2,13 +2,15 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f6f1e7">
 <title>Góc sân cây mít – Khu nướng & uống trà</title>
 <style>
   :root { --bg:#f6f1e7; --ink:#2b2a26; --muted:#6f6a5f; --accent:#b5532c; --line:#e2d9c6; }
   * { box-sizing:border-box; }
   html,body { margin:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:#cfe3f0; }
-  #c { position:fixed; inset:0; display:block; }
+  #c { position:fixed; inset:0; display:block; touch-action:none; -webkit-tap-highlight-color:transparent; }
+  #viewbar { display:none; }
   #labels { position:fixed; inset:0; pointer-events:none; }
   .lbl { position:absolute; transform:translate(-50%,-100%); background:rgba(255,255,255,.88); border:1px solid rgba(0,0,0,.08);
          padding:3px 8px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.12); }
@@ -35,7 +37,26 @@
   .note { font-size:12px; color:var(--muted); line-height:1.5; }
   .note li { margin-bottom:4px; }
   .hint { position:fixed; right:12px; bottom:12px; background:rgba(255,255,255,.85); border-radius:8px; padding:6px 10px; font-size:12px; color:var(--muted); }
-  @media (max-width:640px){ #panel{ width:calc(100% - 24px); max-height:55%; } }
+  /* ---------- phone / small tablet ---------- */
+  @media (max-width:760px) {
+    body { -webkit-user-select:none; user-select:none; }
+    #panel { top:auto; left:8px; right:8px; width:auto; border-radius:16px;
+             bottom:calc(env(safe-area-inset-bottom) + 108px); max-height:58vh; }
+    #panel header { padding:10px 12px; align-items:center; }
+    #panel h1 { font-size:14px; }
+    #panel .sub { display:none; }
+    #toggle { font-size:13px; font-weight:600; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
+    #panel .body { padding:10px 14px 14px; }
+    #viewbar { display:block; position:fixed; left:0; right:0; bottom:0; padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);
+               background:rgba(246,241,231,.94); border-top:1px solid var(--line); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+    #viewbar .btns { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
+    #viewbar .btns::-webkit-scrollbar { display:none; }
+    #viewbar .btns + .btns { margin-top:6px; }
+    #viewbar .btns button { flex:0 0 auto; min-height:36px; padding:7px 12px; font-size:13px; border-radius:999px; }
+    .lbl { font-size:10.5px; padding:2px 7px; }
+    .hint { left:8px; right:8px; top:calc(env(safe-area-inset-top) + 8px); bottom:auto; text-align:center; transition:opacity .6s; }
+    .hint.gone { opacity:0; pointer-events:none; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -97,7 +118,8 @@
     </ul>
   </div>
 </aside>
-<div class="hint">Kéo trái: xoay · Cuộn: zoom về chỗ con trỏ · Kéo phải / Shift+kéo: di chuyển · Nháy đúp: lấy điểm đó làm tâm</div>
+<div id="viewbar"></div>
+<div class="hint" id="hint">Kéo trái: xoay · Cuộn: zoom về chỗ con trỏ · Kéo phải / Shift+kéo: di chuyển · Nháy đúp: lấy điểm đó làm tâm</div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -105,7 +127,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const IS_MOBILE = matchMedia('(max-width:760px)').matches || matchMedia('(pointer:coarse)').matches;
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_MOBILE ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -122,7 +145,9 @@ controls.target.set(0, 0, 4);
 controls.enableDamping = true;
 controls.zoomToCursor = true;          // wheel zooms toward the point under the cursor
 controls.screenSpacePanning = true;
-controls.zoomSpeed = 2.5;              // default is 1
+controls.zoomSpeed = IS_MOBILE ? 1.3 : 2.5;   // wheel needs more, pinch less
+controls.rotateSpeed = IS_MOBILE ? 0.75 : 1;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.panSpeed = 1.5;
 controls.minDistance = 0.5;
 controls.maxDistance = 120;
@@ -136,7 +161,7 @@ sun.position.set(-12, 18, 8);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left:-20, right:20, top:20, bottom:-20, near:1, far:80 });
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(IS_MOBILE ? 2048 : 4096, IS_MOBILE ? 2048 : 4096);
 sun.shadow.bias = -0.0004;
 scene.add(sun);
 
@@ -555,13 +580,38 @@ bind('bRoof', () => (polyRoof.visible = !polyRoof.visible));
 bind('bVine', () => (vines.visible = !vines.visible));
 bind('bLbl', () => { showLabels = !showLabels; labelBox.style.display = showLabels ? '' : 'none'; return showLabels; });
 const panel = document.getElementById('panel');
-document.getElementById('toggle').onclick = (e) => { panel.classList.toggle('collapsed'); e.target.textContent = panel.classList.contains('collapsed') ? '▸' : '▾'; };
+const toggleBtn = document.getElementById('toggle');
+function setCollapsed(c) {
+  panel.classList.toggle('collapsed', c);
+  toggleBtn.textContent = IS_SMALL() ? (c ? 'Thông tin ▴' : 'Đóng ▾') : (c ? '▸' : '▾');
+}
+toggleBtn.onclick = () => setCollapsed(!panel.classList.contains('collapsed'));
+
+// ---------- phone layout: view + toggle buttons in a bottom bar, panel collapsed by default ----------
+const IS_SMALL = () => matchMedia('(max-width:760px)').matches;
+const viewsEl = document.getElementById('views'), togglesEl = document.getElementById('bNight').parentElement;
+const viewsHome = viewsEl.parentElement, viewsNext = viewsEl.nextSibling, togglesNext = togglesEl.nextSibling;
+const hint = document.getElementById('hint');
+function applyLayout() {
+  const vb = document.getElementById('viewbar');
+  if (IS_SMALL()) {
+    if (viewsEl.parentElement !== vb) { vb.append(viewsEl, togglesEl); setCollapsed(true); }
+    hint.textContent = '1 ngón: xoay · 2 ngón: chụm để zoom, kéo để di chuyển · Chạm 2 lần: lấy điểm làm tâm';
+  } else {
+    if (viewsEl.parentElement === vb) { viewsHome.insertBefore(viewsEl, viewsNext); viewsHome.insertBefore(togglesEl, togglesNext); setCollapsed(false); }
+    hint.textContent = 'Kéo trái: xoay · Cuộn: zoom về chỗ con trỏ · Kéo phải / Shift+kéo: di chuyển · Nháy đúp: lấy điểm đó làm tâm';
+  }
+}
+applyLayout();
+if (IS_MOBILE) setTimeout(() => hint.classList.add('gone'), 6000);
+// tapping a view button on the phone closes the info sheet so the scene is visible
+viewsEl.addEventListener('click', () => { if (IS_SMALL()) setCollapsed(true); });
 
 // ---------- double-click: move orbit centre to the clicked point ----------
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-canvas.addEventListener('dblclick', (e) => {
+function focusAt(cx, cy) {
   const r = canvas.getBoundingClientRect();
-  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const hit = ray.intersectObjects(scene.children, true).find(h => h.object.visible && h.object.isMesh);
   if (!hit) return;
@@ -569,12 +619,29 @@ canvas.addEventListener('dblclick', (e) => {
   const p1 = hit.point.clone().add(off.multiplyScalar(0.6));      // move closer while re-centring
   anim = { p0: camera.position.clone(), t0: controls.target.clone(), p1, t1: hit.point.clone(), s: performance.now() };
   document.querySelectorAll('#views button').forEach(b => b.classList.remove('on'));
+}
+canvas.addEventListener('dblclick', (e) => focusAt(e.clientX, e.clientY));
+// double-tap on touch screens (dblclick is unreliable there): two short taps close together
+let lastTap = { t: 0, x: 0, y: 0 }, downAt = null;
+canvas.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && e.isPrimary) downAt = { t: performance.now(), x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', (e) => {
+  if (e.pointerType !== 'touch' || !downAt) return;
+  const now = performance.now(), moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+  if (now - downAt.t < 250 && moved < 12) {                                   // it was a tap, not a drag
+    if (now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) { focusAt(e.clientX, e.clientY); lastTap.t = 0; }
+    else lastTap = { t: now, x: e.clientX, y: e.clientY };
+  }
+  downAt = null;
 });
+canvas.addEventListener('pointerdown', () => { if (IS_SMALL() && !panel.classList.contains('collapsed')) setCollapsed(true); });
 
 // ---------- loop ----------
 function resize() {
   const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  camera.fov = w / h < 0.8 ? 62 : 50;                 // wider lens in portrait so the scene fits
+  camera.updateProjectionMatrix();
+  applyLayout();
 }
 addEventListener('resize', resize); resize();
 const tmp = new THREE.Vector3();
