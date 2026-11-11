@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Góc sân cây mít – Khu nướng & uống trà</title>
+<style>
+  :root { --bg:#f6f1e7; --ink:#2b2a26; --muted:#6f6a5f; --accent:#b5532c; --line:#e2d9c6; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:#cfe3f0; }
+  #c { position:fixed; inset:0; display:block; }
+  #labels { position:fixed; inset:0; pointer-events:none; }
+  .lbl { position:absolute; transform:translate(-50%,-100%); background:rgba(255,255,255,.88); border:1px solid rgba(0,0,0,.08);
+         padding:3px 8px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.12); }
+  .lbl b { color:var(--accent); margin-right:4px; }
+  #panel { position:fixed; top:12px; left:12px; width:330px; max-height:calc(100% - 24px); overflow:auto; background:var(--bg);
+           border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.18); }
+  #panel header { padding:14px 16px 10px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; gap:8px; }
+  #panel h1 { font-size:16px; margin:0 0 2px; line-height:1.3; }
+  #panel .sub { font-size:12px; color:var(--muted); }
+  #toggle { margin-left:auto; border:0; background:transparent; font-size:18px; cursor:pointer; color:var(--muted); }
+  #panel .body { padding:12px 16px 16px; }
+  #panel.collapsed .body { display:none; }
+  .sec { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:14px 0 6px; font-weight:700; }
+  .sec:first-child { margin-top:0; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; }
+  .btns button { border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; color:var(--ink); }
+  .btns button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  ol { margin:0; padding-left:0; list-style:none; counter-reset:z; }
+  ol li { counter-increment:z; position:relative; padding:6px 0 6px 28px; border-bottom:1px dashed var(--line); font-size:12.5px; line-height:1.45; }
+  ol li:last-child { border-bottom:0; }
+  ol li::before { content:counter(z); position:absolute; left:0; top:6px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff;
+                  font-size:11px; font-weight:700; display:grid; place-items:center; }
+  ol li strong { display:block; font-size:13px; }
+  .note { font-size:12px; color:var(--muted); line-height:1.5; }
+  .note li { margin-bottom:4px; }
+  .hint { position:fixed; right:12px; bottom:12px; background:rgba(255,255,255,.85); border-radius:8px; padding:6px 10px; font-size:12px; color:var(--muted); }
+  @media (max-width:640px){ #panel{ width:calc(100% - 24px); max-height:55%; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="labels"></div>
+
+<aside id="panel">
+  <header>
+    <div>
+      <h1>Góc sân cây mít: khu nướng &amp; uống trà</h1>
+      <div class="sub">Bản phác ý tưởng 3D · kích thước ước lượng</div>
+    </div>
+    <button id="toggle" title="Thu gọn">▾</button>
+  </header>
+  <div class="body">
+    <div class="sec">Góc nhìn</div>
+    <div class="btns" id="views">
+      <button data-v="overview" class="on">Toàn cảnh</button>
+      <button data-v="table">Ngồi bàn nhìn ra chùa</button>
+      <button data-v="tea">Từ sập trà</button>
+      <button data-v="bbq">Quầy nướng</button>
+      <button data-v="stairs">Từ bãi xe nhìn lên</button>
+      <button data-v="pond">Hồ nước</button>
+      <button data-v="top">Mặt bằng</button>
+    </div>
+
+    <div class="sec">Hiển thị</div>
+    <div class="btns">
+      <button id="bNight">🌙 Buổi tối</button>
+      <button id="bRoof" class="on">Mái poly</button>
+      <button id="bVine" class="on">Giàn cây</button>
+      <button id="bLbl" class="on">Nhãn</button>
+    </div>
+
+    <div class="sec">Các khu</div>
+    <ol>
+      <li><strong>Giàn che + bàn tiệc 8 người</strong>Khung gỗ 3,6 × 3,6 m, cao 2,7 m. Phía trên trồng giàn (chanh leo, hoa giấy hoặc bầu bí), dưới lớp lá lợp tấm poly trong để che mưa mà vẫn sáng. Bàn dài 2,4 m, hai băng ghế.</li>
+      <li><strong>Ghế vòng quanh gốc mít</strong>Giữ nguyên cây mít và bồn cây. Đóng vòng ghế gỗ cao 45 cm quanh bồn, ngồi tựa lưng vào bóng mát. Giàn tre treo lan giữ nguyên.</li>
+      <li><strong>Sập trà sát lan can</strong>Sập gỗ 1,8 × 1,4 m, cao 42 cm, quay mặt ra chùa. Ngồi bệt, bàn trà thấp ở giữa. Có thể dùng luôn bộ ghế gỗ chạm sẵn có.</li>
+      <li><strong>Quầy nướng có mái riêng</strong>Quầy xây gạch dài 3,2 m, cao 90 cm: ô bếp nướng, mặt sơ chế, chậu rửa. Mái tôn nghiêng và chụp hút khói riêng, cách bàn ăn khoảng 5 m để khói ít bay vào chỗ ngồi.</li>
+      <li><strong>Sân sau</strong>Khoảng trống phía sau cây mít, nối với sân trước bằng lối đá. Để trống làm chỗ chơi hoặc kê thêm bàn khi đông khách.</li>
+      <li><strong>Rừng tre phấn</strong>Bụi tre thân xanh phấn cong vươn ra, lá rủ ở nửa trên. Làm nền xanh, che gió.</li>
+      <li><strong>Taluy dốc + cầu thang</strong>Dốc cỏ thoải nối bãi xe với sân. Cầu thang đá rộng 1,2 m, khoảng 24 bậc, có tay vịn hai bên, lên thẳng chỗ lan can mở.</li>
+      <li><strong>Dây đèn bóng tròn</strong>Căng từ giàn sang cây mít và mái quầy nướng. Bấm "Buổi tối" để xem.</li>
+      <li><strong>Hồ nước cạnh sân sau</strong>Hồ xây nổi, viền đá cao 40 cm, khoảng 4 × 3 m. Thả cá, trồng súng hoặc sen, có ghế gỗ ngồi ngắm, quanh bờ đặt đá và cây lá.</li>
+    </ol>
+
+    <div class="sec">Giả định &amp; lưu ý</div>
+    <ul class="note">
+      <li>Sân giả định rộng khoảng <b>14 m</b> dọc lan can; sân trước sâu 7,5 m, sân sau thêm khoảng 5,5 m. Bãi xe thấp hơn khoảng 4,2 m. Gửi kích thước thật để mình chỉnh.</li>
+      <li>Nên đặt quầy nướng ở <b>cuối hướng gió</b> thường thổi qua sân. Nếu gió thổi từ phải sang thì đổi quầy sang trái.</li>
+      <li>Trồng giàn cây phải chờ 6–12 tháng mới phủ kín. Trong thời gian đó tấm poly và lưới che nắng làm thay.</li>
+    </ul>
+  </div>
+</aside>
+<div class="hint">Kéo trái: xoay · Cuộn: zoom về chỗ con trỏ · Kéo phải / Shift+kéo: di chuyển · Nháy đúp: lấy điểm đó làm tâm</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const DAY_BG = new THREE.Color(0xbfdcef), NIGHT_BG = new THREE.Color(0x141c2e);
+scene.background = DAY_BG.clone();
+scene.fog = new THREE.Fog(0xbfdcef, 40, 140);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 400);
+camera.position.set(15, 11, 17);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0, 4);
+controls.enableDamping = true;
+controls.zoomToCursor = true;          // wheel zooms toward the point under the cursor
+controls.screenSpacePanning = true;
+controls.zoomSpeed = 2.5;              // default is 1
+controls.panSpeed = 1.5;
+controls.minDistance = 0.5;
+controls.maxDistance = 120;
+controls.maxPolarAngle = Math.PI * 0.495;
+
+// ---------- lights ----------
+const hemi = new THREE.HemisphereLight(0xeaf4ff, 0x8a7a5a, 0.9);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
+sun.position.set(-12, 18, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-20, right:20, top:20, bottom:-20, near:1, far:80 });
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+// ---------- materials ----------
+const M = (color, o={}) => new THREE.MeshStandardMaterial({ color, roughness:0.85, ...o });
+const mat = {
+  concrete: M(0xb9b3a5), tiles: M(0xc9a27e), wood: M(0x8a5a36), woodDark: M(0x5b3a22), woodLight: M(0xb07f52),
+  metal: M(0x1f2226, { roughness:0.5, metalness:0.6 }), brick: M(0xa5543a), stone: M(0x9c9a92), slab: M(0x6e6a64, { roughness:0.4 }),
+  leaf: M(0x4f8a3a), leaf2: M(0x3f7a33), leafLight: M(0x6aa64a), soil: M(0x5a4632), jack: M(0xb5b842),
+  roofTin: M(0x5f7f72, { roughness:0.5, metalness:0.4 }), poly: new THREE.MeshStandardMaterial({ color:0xe8f4ff, transparent:true, opacity:0.28, roughness:0.2, side:THREE.DoubleSide, depthWrite:false }),
+  cushion: M(0xd9c7a0), cushion2: M(0x7c3b2a), asphalt: M(0x8f8d88), grass: M(0x5f8e43), hill: M(0x4b7d3a),
+  red: M(0xb8432a), pagodaWall: M(0xd9b38a), bulb: new THREE.MeshStandardMaterial({ color:0xfff3c4, emissive:0xffc968, emissiveIntensity:0.2 }),
+  wire: new THREE.LineBasicMaterial({ color:0x222222 }), pot: M(0x2a2a2a), terracotta: M(0xb0623d)
+};
+
+let PARENT = scene;
+function box(w, h, d, m, x, y, z, parent=PARENT) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y + h/2, z);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  parent.add(mesh); return mesh;
+}
+function cyl(rt, rb, h, m, x, y, z, seg=16, parent=PARENT) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m);
+  mesh.position.set(x, y + h/2, z);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  parent.add(mesh); return mesh;
+}
+function sphere(r, m, x, y, z, sx=1, sy=1, sz=1, parent=PARENT) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), m);
+  mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  parent.add(mesh); return mesh;
+}
+
+// ---------- yard (x: -7..7 along railing, z: 0 railing .. 13 back yard edge) ----------
+const YW = 14, YD = 13;
+box(YW, 0.2, 7.5, mat.concrete, 0, -0.2, 3.75);                 // front yard (paved)
+box(YW, 0.2, YD - 7.5, M(0x8d8a6e), 0, -0.21, 7.5 + (YD - 7.5) / 2); // back yard (beaten earth / grass)
+box(4.4, 0.03, 4.4, mat.tiles, -2.8, 0, 2.6);            // paving under pergola
+box(1.6, 0.03, 4.0, mat.tiles, 4.1, 0, 4.6);             // paving at BBQ
+// stepping-stone path from front yard to back yard
+for (let i = 0; i < 6; i++) box(0.6, 0.04, 0.45, mat.stone, -0.6 + Math.sin(i) * 0.25, 0, 7.2 + i * 0.85);
+// back yard: a few low shrubs and a clothesline-free open lawn
+[[3.5, 10.5], [5.8, 8.6], [6.2, 12], [-0.8, 12.3]].forEach(([x, z], i) => sphere(0.55, i % 2 ? mat.leaf : mat.leafLight, x, 0.35, z, 1.2, 0.8, 1.2));
+
+// bamboo forest (tre phấn) behind the back yard: clumps of arching culms, feathery foliage on the upper half
+{
+  const culmMat = M(0xa9b886, { roughness:0.55 });      // powdery grey-green culms
+  const leafMats = [M(0x5d8f3c, { roughness:0.9 }), M(0x76a64a, { roughness:0.9 }), M(0x4a7a30, { roughness:0.9 })];
+  const segGeo = new THREE.CylinderGeometry(0.032, 0.042, 1, 6); segGeo.translate(0, 0.5, 0);
+  const leafGeo = new THREE.SphereGeometry(1, 7, 5);
+  const SEG = 6, NC = 520;
+  const culms = new THREE.InstancedMesh(segGeo, culmMat, NC * SEG);
+  const leaves = leafMats.map(m => new THREE.InstancedMesh(leafGeo, m, NC * 6));
+  const lc = [0, 0, 0];
+  [culms, ...leaves].forEach(m => { m.castShadow = true; m.frustumCulled = false; });
+  const o = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0), d = new THREE.Vector3();
+  let kc = 0, s2 = 11, nCulm = 0;
+  const r2 = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
+  const groundY = z => Math.max(0, (z - YD) * 0.255);
+  for (let c = 0; c < 42 && nCulm < NC; c++) {
+    const cx = -10 + r2() * 20, cz = YD + 0.9 + r2() * 9;
+    const n = 10 + Math.floor(r2() * 6);
+    for (let j = 0; j < n && nCulm < NC; j++, nCulm++) {
+      const phi = r2() * Math.PI * 2, rr = 0.15 + r2() * 0.35;
+      const bx = cx + Math.cos(phi) * rr, bz = cz + Math.sin(phi) * rr, by = groundY(bz);
+      const h = 6.5 + r2() * 4.5, arch = 0.12 + r2() * 0.22;      // outward arch grows toward the tip
+      const pts = [];
+      for (let i = 0; i <= SEG; i++) {
+        const t = i / SEG, out = arch * h * t * t;
+        pts.push(new THREE.Vector3(bx + Math.cos(phi) * out, by + h * t * (1 - 0.12 * t * t), bz + Math.sin(phi) * out));
+      }
+      for (let i = 0; i < SEG; i++) {
+        d.subVectors(pts[i + 1], pts[i]); const L = d.length();
+        o.position.copy(pts[i]); o.quaternion.setFromUnitVectors(up, d.normalize()); o.scale.set(1 - i * 0.1, L, 1 - i * 0.1); o.updateMatrix();
+        culms.setMatrixAt(kc++, o.matrix);
+      }
+      // drooping leaf masses along the upper half, hanging outward
+      for (let i = 3; i <= SEG; i++) {
+        const p = pts[i], w = 0.45 + r2() * 0.35 + (i - 3) * 0.08, mi = Math.floor(r2() * 3);
+        o.position.set(p.x + Math.cos(phi) * w * 0.6, p.y - 0.25 - (i === SEG ? 0.35 : 0), p.z + Math.sin(phi) * w * 0.6);
+        o.quaternion.identity(); o.rotation.set(0, -phi, (r2() - 0.5) * 0.4);
+        o.scale.set(w * 1.5, 0.32 + r2() * 0.2, w); o.updateMatrix();
+        leaves[mi].setMatrixAt(lc[mi]++, o.matrix);
+      }
+    }
+  }
+  culms.count = kc; leaves.forEach((m, i) => (m.count = lc[i]));
+  scene.add(culms, ...leaves);
+  const ground = box(28, 0.3, 12, mat.hill, 0, 0, YD + 6); ground.position.y = 1.33; ground.rotation.x = -0.25;
+  // leaf litter strip where the back yard meets the bamboo
+  box(YW, 0.03, 0.8, M(0x8a7148), 0, 0, YD - 0.2);
+}
+
+// raised garden pond beside the back yard (left side)
+{
+  const PCX = -4.6, PCZ = 10.2;
+  const blob = (rx, rz, n = 40) => { const sh = new THREE.Shape();
+    for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, r = 1 + 0.12 * Math.sin(3 * a) + 0.07 * Math.cos(5 * a);
+      const x = Math.cos(a) * rx * r, y = Math.sin(a) * rz * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); } return sh; };
+  const outer = blob(2.3, 1.7), inner = blob(1.95, 1.38);
+  const ringShape = blob(2.3, 1.7); ringShape.holes.push(new THREE.Path(inner.getPoints(40)));
+  const rim = new THREE.Mesh(new THREE.ExtrudeGeometry(ringShape, { depth:0.4, bevelEnabled:true, bevelSize:0.05, bevelThickness:0.05, bevelSegments:2 }), M(0x8f8b80, { roughness:0.95 }));
+  rim.rotation.x = -Math.PI / 2; rim.position.set(PCX, 0, PCZ); rim.castShadow = rim.receiveShadow = true; scene.add(rim);
+  const bed = new THREE.Mesh(new THREE.ShapeGeometry(inner), M(0x2f3a2c));
+  bed.rotation.x = -Math.PI / 2; bed.position.set(PCX, 0.02, PCZ); scene.add(bed);
+  // fish
+  [[0.3, 0.2], [-0.6, -0.3], [0.9, -0.4], [-0.2, 0.6]].forEach(([dx, dz], i) => {
+    const f = sphere(0.09, M(i % 2 ? 0xf08a24 : 0xf4f1ea), PCX + dx, 0.2, PCZ + dz, 2, 0.7, 0.8); f.rotation.y = i; });
+  const water = new THREE.Mesh(new THREE.ShapeGeometry(inner), new THREE.MeshStandardMaterial({ color:0x3f7f8f, transparent:true, opacity:0.72, roughness:0.08, metalness:0.2 }));
+  water.rotation.x = -Math.PI / 2; water.position.set(PCX, 0.32, PCZ); scene.add(water);
+  // lotus / water-lily pads and flowers
+  [[-0.9, 0.4], [-1.2, -0.2], [0.8, 0.6], [1.1, 0.1], [-0.4, -0.7]].forEach(([dx, dz], i) => {
+    const pad = cyl(0.22 + (i % 2) * 0.08, 0.22 + (i % 2) * 0.08, 0.015, M(0x4f8f3a), PCX + dx, 0.33, PCZ + dz, 14); pad.castShadow = false;
+    if (i % 2 === 0) sphere(0.08, M(0xf2a6c0), PCX + dx + 0.05, 0.4, PCZ + dz, 1, 0.8, 1);
+  });
+  // rocks and plants around the rim
+  for (let i = 0; i < 9; i++) { const a = i * 0.7 + 0.3; sphere(0.18 + (i % 3) * 0.08, mat.stone, PCX + Math.cos(a) * 2.45, 0.12, PCZ + Math.sin(a) * 1.85, 1.3, 0.7, 1); }
+  [[-2.5, 1.0], [2.2, -1.3], [-1.8, -1.6]].forEach(([dx, dz]) => {
+    for (let j = 0; j < 7; j++) { const l = box(0.04, 0.9 + (j % 3) * 0.2, 0.04, mat.leafLight, PCX + dx + (j - 3) * 0.06, 0, PCZ + dz); l.rotation.z = (j - 3) * 0.12; }
+  });
+  // small wooden bench facing the pond
+  box(1.4, 0.06, 0.4, mat.woodLight, PCX + 2.9, 0.42, PCZ + 0.2).rotation.y = Math.PI / 2;
+  for (const dz of [-0.55, 0.55]) box(0.35, 0.42, 0.07, mat.woodDark, PCX + 2.9, 0, PCZ + 0.2 + dz);
+}
+
+// sloped embankment (taluy vát) from yard down to the parking lot, with a staircase
+const DROP = 4.2, RUN = 6.0;                          // 4.2 m down over ~6 m
+{
+  const len = Math.hypot(DROP, RUN), ang = Math.atan2(DROP, RUN);
+  const slope = new THREE.Mesh(new THREE.BoxGeometry(YW + 4, 0.3, len), mat.grass);
+  slope.position.set(-0.5, -DROP / 2 - 0.15, -RUN / 2); slope.rotation.x = -ang; slope.receiveShadow = true; scene.add(slope);
+  // shrubs on the slope
+  for (let i = 0; i < 26; i++) {
+    const x = -8 + (i * 0.63) % 13.5, t = ((i * 37) % 10) / 10;
+    if (x > 4.6 && x < 6.6) continue;                  // keep stairs clear
+    sphere(0.4 + (i % 3) * 0.12, i % 2 ? mat.leaf : mat.leafLight, x, -DROP * t + 0.15, -RUN * t, 1.2, 0.7, 1.1);
+  }
+  // staircase along the slope at x 5.0..6.2
+  const SXc = 5.6, SW = 1.2, steps = 24, rise = DROP / steps, run = RUN / steps;
+  for (let i = 0; i < steps; i++) box(SW, (i + 1) * rise, run + 0.01, mat.stone, SXc, -DROP, -RUN + i * run + run / 2);
+  box(SW + 0.2, 0.05, 0.9, mat.stone, SXc, -0.04, 0.45);   // top landing
+  // stair side walls + handrails
+  for (const dx of [-SW / 2 - 0.08, SW / 2 + 0.08]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.35, len), mat.stone);
+    wall.position.set(SXc + dx, -DROP / 2 + 0.1, -RUN / 2); wall.rotation.x = -ang; wall.castShadow = true; scene.add(wall);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, len), mat.metal);
+    rail.position.set(SXc + dx, -DROP / 2 + 0.95, -RUN / 2); rail.rotation.x = -ang; scene.add(rail);
+    for (let i = 0; i <= 6; i++) { const t = i / 6; box(0.035, 0.85, 0.035, mat.metal, SXc + dx, -DROP * (1 - t) + 0.1, -RUN * (1 - t)); }
+  }
+}
+// lower parking lot (starts at foot of slope)
+const LOT = { x0: -9.6, x1: 9.6, z0: -RUN - 0.1, z1: -RUN - 19.3 };
+box(28, 0.2, 21, mat.asphalt, 0, -DROP - 0.2, -RUN - 9.6);                 // square parking lot ~19 x 19 m
+box(80, 0.2, 60, M(0x9a978f), 10, -DROP - 0.25, -RUN - 30);             // surrounding ground
+const carColors = [0xf2f2f2, 0x2d3440, 0xd9d9d9, 0x9a1f1f];
+[[-6, -9.5], [-3, -10.5], [1, -9], [8.3, -14]].forEach(([x, z], i) => {
+  box(1.8, 0.8, 4.2, M(carColors[i], { roughness:0.35, metalness:0.3 }), x, -DROP, z);
+  box(1.6, 0.6, 2.2, M(0x334455, { roughness:0.2 }), x, -DROP + 0.8, z + 0.2);
+});
+// neighbour houses: red row and grey row facing each other across an alley that opens into the parking lot
+// (built in local coords with the alley along -z, then turned so the alley runs east from the lot's right edge)
+{
+  const grp = new THREE.Group(); scene.add(grp); PARENT = grp;
+  const gy = -DROP, D = 6, ALLEY = 3.5, L = 19.2;
+  const RX0 = 0, RX1 = D, GX0 = RX1 + ALLEY, GX1 = GX0 + D;
+  const zA = 0, zB = -L, n = 4, w = L / n;
+  function row(x0, x1, front, dir, colors) {
+    for (let i = 0; i < n; i++) {
+      const zc = zA - i * w - w / 2, h = [10, 9, 11, 9.5][(i + (dir > 0 ? 0 : 1)) % 4];
+      box(x1 - x0, h, w - 0.05, M(colors[i % colors.length]), (x0 + x1) / 2, gy, zc);
+      box(x1 - x0 + 0.2, 0.25, w + 0.1, M(0x7a7066), (x0 + x1) / 2, gy + h, zc);
+      for (let f = 0; f < Math.floor(h / 3); f++) {
+        for (const dz of [-w / 4, w / 4]) box(0.06, 1.2, 1.0, M(0x2d3a48, { roughness:0.2 }), front + dir * 0.02, gy + 1.0 + f * 3, zc + dz);
+        if (f > 0) box(0.7, 0.08, w - 0.6, M(0xe6e2da), front + dir * 0.35, gy + f * 3 - 0.1, zc);
+        if (f > 0) box(0.04, 0.9, w - 0.6, M(0x2a2a2a, { metalness:0.5 }), front + dir * 0.68, gy + f * 3 - 0.02, zc);
+      }
+      box(0.08, 2.4, 2.6, M(0x6b6f74, { metalness:0.4, roughness:0.5 }), front + dir * 0.02, gy, zc);
+      box(0.9, 0.06, w - 0.4, M(0x8b8f93, { metalness:0.3 }), front + dir * 0.45, gy + 2.7, zc);
+    }
+  }
+  // red block: each house runs from the alley front back to the line of the lot's far wall -> one rectangular block
+  const RBACK = LOT.z1 - (-16.75);                   // local x of the far-wall line (world z = LOT.z1)
+  row(RBACK, RX1, RX1, +1, [0xa63a35, 0xb4473c, 0x9c3330, 0xae4038]);
+  for (let x = RBACK + 2; x < RX1 - 1; x += 3)       // small side windows on the gable facing the parking lot
+    for (let f = 1; f < 3; f++) box(0.8, 0.8, 0.06, M(0x2d3a48, { roughness:0.2 }), x, gy + 1.2 + f * 3, zA + 0.02);
+  row(GX0, GX1, GX0, -1, [0xb9bdbf, 0xc8cacb, 0xaeb3b6, 0xc2c4c4]);
+  const AX = (RX1 + GX0) / 2;
+  box(ALLEY, 0.04, L + 1, M(0xa9a397), AX, gy, -L / 2 + 0.5);
+  box(0.25, 0.06, L + 1, M(0x6f6a62), AX, gy, -L / 2 + 0.5);
+  for (const z of [zA + 0.2, zB - 0.2]) {
+    for (const x of [RX1 + 0.15, GX0 - 0.15]) box(0.2, 3.4, 0.2, M(0x8a857a), x, gy, z);
+    box(ALLEY + 0.1, 0.4, 0.25, M(0x8a857a), AX, gy + 3.4, z);
+  }
+  for (let z = zA - 3; z > zB; z -= 6) {
+    cyl(0.04, 0.04, 2.9, mat.metal, RX1 + 0.3, gy, z, 8); sphere(0.14, mat.bulb, RX1 + 0.3, gy + 3.0, z);
+    cyl(0.25, 0.2, 0.45, mat.terracotta, GX0 - 0.35, gy, z - 1.5, 10); sphere(0.35, mat.leafLight, GX0 - 0.35, gy + 0.7, z - 1.5);
+  }
+  PARENT = scene;
+  // turn: local -z -> world +x, local +x -> world +z. Alley mouth sits at the lot's right edge near the red car.
+  grp.rotation.y = -Math.PI / 2;
+  grp.position.set(LOT.x1, 0, -16.75);               // red row z -16.75..-10.75, alley -10.75..-7.25, grey -7.25..-1.25
+}
+
+// parking lot boundary: square ~19 x 19 m, walls with planting on the left and far sides, red houses on the right
+{
+  const gy = -DROP, H = 1.7;
+  function plantedWall(ax, az, bx, bz, inward) {     // inward: unit vector [dx,dz] pointing into the lot
+    const len = Math.hypot(bx - ax, bz - az), cx = (ax + bx) / 2, cz = (az + bz) / 2, along = Math.abs(bx - ax) > 0.1;
+    const W = (w, d) => along ? [len + w, d] : [d, len + w];
+    const [ww, wd] = W(0.25, 0.25); box(ww, H, wd, M(0xd8d2c4), cx, gy, cz);
+    const [cw, cd] = W(0.35, 0.35); box(cw, 0.08, cd, M(0x8a857a), cx, gy + H, cz);
+    const px = cx + inward[0] * 0.5, pz = cz + inward[1] * 0.5;
+    const [pw, pd] = W(-0.2, 0.7); box(pw, 0.45, pd, mat.brick, px, gy, pz);
+    for (let t = 0.2; t < len - 0.2; t += 0.75) {
+      const x = (along ? ax + Math.sign(bx - ax) * t : px), z = (along ? pz : az + Math.sign(bz - az) * t), i = Math.round(t * 4);
+      sphere(0.32 + (i % 3) * 0.06, i % 2 ? mat.leaf : mat.leafLight, x, gy + 0.75, z, 1, 0.9, 1);
+      if (i % 5 === 0) sphere(0.1, M(0xd94c8a), x + inward[0] * 0.25, gy + 0.95, z + inward[1] * 0.25);
+      if (i % 2 === 0) sphere(0.4, mat.leaf2, along ? x : cx, gy + H + 0.15, along ? cz : z, 1, 0.45, 1);   // creepers on top
+    }
+    for (let t = 2.5; t < len; t += 6) {
+      const x = along ? ax + Math.sign(bx - ax) * t : px, z = along ? pz : az + Math.sign(bz - az) * t;
+      cyl(0.07, 0.1, 2.4, mat.woodDark, x, gy + 0.45, z, 8); sphere(0.9, mat.leaf, x, gy + 3.1, z, 1, 0.85, 1);
+    }
+    for (let t = 0; t <= len + 0.01; t += 3) box(0.4, H + 0.15, 0.4, M(0xcac3b3), along ? ax + Math.sign(bx - ax) * t : cx, gy, along ? cz : az + Math.sign(bz - az) * t);
+  }
+  plantedWall(LOT.x0, LOT.z0, LOT.x0, LOT.z1, [1, 0]);          // left wall
+  plantedWall(LOT.x0, LOT.z1, LOT.x1, LOT.z1, [0, 1]);          // far wall
+  box(14, 0.12, 22, mat.grass, LOT.x0 - 7, gy - 0.1, (LOT.z0 + LOT.z1) / 2);   // grass outside the left wall
+  box(40, 0.12, 14, mat.grass, 4, gy - 0.1, LOT.z1 - 7.2);                     // grass beyond the far wall
+}
+
+// distant hill + pagoda
+const far = sphere(30, mat.hill, 0, -14, -80, 1.6, 1, 0.8); far.castShadow = false;
+function pagoda(x, y, z, s) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(s); scene.add(g);
+  box(10, 3, 6, mat.pagodaWall, 0, 0, 0, g);
+  for (let i = 0; i < 3; i++) {
+    const r = new THREE.Mesh(new THREE.ConeGeometry(7 - i * 1.8, 1.6, 4), mat.red);
+    r.rotation.y = Math.PI / 4; r.scale.z = 0.65; r.position.set(0, 3.6 + i * 2.2, 0); g.add(r);
+    if (i < 2) box(6 - i * 2, 1.4, 3.5 - i, mat.pagodaWall, 0, 4.2 + i * 2.2, 0, g);
+  }
+  const t = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3, 6), mat.red); t.position.set(-7, 6, 0); g.add(t);
+}
+pagoda(2, 12, -70, 1.3);
+
+// ---------- railing ----------
+// two runs, leaving an opening at the top of the stairs (x 5.0..6.2)
+for (const [a, b] of [[-7, 4.95], [6.25, 7]]) {
+  box(b - a, 0.05, 0.05, mat.metal, (a + b) / 2, 1.08, 0.05);
+  box(b - a, 0.04, 0.04, mat.metal, (a + b) / 2, 0.12, 0.05);
+  for (let x = a + 0.05; x <= b - 0.02; x += 0.13) box(0.025, 1.0, 0.025, mat.metal, x, 0.1, 0.05);
+}
+for (const x of [4.95, 6.25]) box(0.08, 1.15, 0.08, mat.metal, x, 0, 0.05);
+// planters along railing
+[[-4.5, 0.5], [-0.4, 0.45], [4.4, 0.5]].forEach(([x, z]) => {
+  box(0.7, 0.5, 0.5, mat.terracotta, x, 0, z);
+  sphere(0.5, mat.leafLight, x, 0.95, z, 1, 1.1, 0.8);
+});
+
+// ---------- 1. pergola + dining ----------
+const pergola = new THREE.Group(); scene.add(pergola);
+const PX0 = -4.6, PX1 = -1.0, PZ0 = 0.8, PZ1 = 4.4, PH = 2.7;
+for (const x of [PX0, (PX0 + PX1) / 2, PX1]) for (const z of [PZ0, PZ1]) box(0.15, PH, 0.15, mat.woodDark, x, 0, z, pergola);
+for (const z of [PZ0, PZ1]) box(PX1 - PX0 + 0.5, 0.22, 0.12, mat.woodDark, (PX0 + PX1) / 2, PH - 0.22, z, pergola);
+for (let x = PX0 - 0.15; x <= PX1 + 0.16; x += 0.4) box(0.06, 0.14, PZ1 - PZ0 + 0.6, mat.wood, x, PH, (PZ0 + PZ1) / 2, pergola);
+const polyRoof = box(PX1 - PX0 + 0.5, 0.015, PZ1 - PZ0 + 0.6, mat.poly, (PX0 + PX1) / 2, PH + 0.15, (PZ0 + PZ1) / 2);
+polyRoof.castShadow = false;
+// vines on top
+const vines = new THREE.Group(); scene.add(vines);
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (let i = 0; i < 70; i++) {
+  const x = PX0 + rnd() * (PX1 - PX0), z = PZ0 + rnd() * (PZ1 - PZ0);
+  sphere(0.35 + rnd() * 0.3, rnd() > 0.5 ? mat.leaf : mat.leafLight, x, PH + 0.25, z, 1.2, 0.45, 1.2, vines);
+}
+for (const [x, z] of [[PX0, PZ0], [PX1, PZ0], [PX0, PZ1], [PX1, PZ1]]) {        // climbing up posts
+  for (let y = 0.4; y < PH; y += 0.45) sphere(0.18, mat.leaf2, x + 0.08, y, z + 0.08, 1, 1.4, 1, vines);
+}
+// table + benches
+const TX = -2.8, TZ = 2.6;
+box(2.4, 0.06, 0.9, mat.woodLight, TX, 0.72, TZ);
+for (const dx of [-1.05, 1.05]) for (const dz of [-0.35, 0.35]) box(0.08, 0.72, 0.08, mat.woodDark, TX + dx, 0, TZ + dz);
+for (const dz of [-0.78, 0.78]) {
+  box(2.3, 0.06, 0.36, mat.woodLight, TX, 0.42, TZ + dz);
+  for (const dx of [-1.0, 1.0]) box(0.07, 0.42, 0.3, mat.woodDark, TX + dx, 0, TZ + dz);
+}
+// a few things on the table
+[[-0.7, 0], [0, 0.1], [0.6, -0.1]].forEach(([dx, dz]) => cyl(0.14, 0.12, 0.04, M(0xf5f5f0), TX + dx, 0.78, TZ + dz));
+cyl(0.05, 0.05, 0.25, M(0x2f6b3a, { roughness:0.2 }), TX + 0.2, 0.78, TZ - 0.2, 10);
+
+// ---------- 2. jackfruit tree + ring bench ----------
+const TRX = 1.0, TRZ = 4.2;
+cyl(1.3, 1.3, 0.3, mat.stone, TRX, 0, TRZ, 32);
+cyl(1.2, 1.2, 0.02, mat.soil, TRX, 0.3, TRZ, 32);
+cyl(0.22, 0.32, 3.4, mat.woodDark, TRX, 0, TRZ, 12);
+const t2 = cyl(0.16, 0.22, 3.0, mat.woodDark, TRX - 0.5, 0.2, TRZ + 0.3, 10); t2.rotation.z = 0.25;
+[[2.4, 0, 0], [1.9, -1.4, 0.6], [1.9, 1.4, -0.4], [1.7, 0.3, 1.5], [1.7, -0.5, -1.4]].forEach(([r, dx, dz], i) =>
+  sphere(r, i % 2 ? mat.leaf2 : mat.leaf, TRX + dx, 4.6 + (i ? -0.3 : 0.3), TRZ + dz, 1, 0.7, 1));
+[[0.25, 1.2, 0.1], [-0.2, 0.7, 0.25], [0.15, 1.9, -0.25], [-0.25, 1.5, -0.1]].forEach(([dx, y, dz]) =>
+  sphere(0.22, mat.jack, TRX + dx, y, TRZ + dz, 1, 1.4, 1));
+for (let i = 0; i < 10; i++) { const a = i * 0.63; sphere(0.28, mat.leafLight, TRX + Math.cos(a) * 0.8, 0.5, TRZ + Math.sin(a) * 0.8, 1, 0.8, 1); }
+// ring bench
+{
+  const shape = new THREE.Shape(); shape.absarc(0, 0, 1.85, 0, Math.PI * 2, false);
+  const hole = new THREE.Path(); hole.absarc(0, 0, 1.4, 0, Math.PI * 2, true); shape.holes.push(hole);
+  const seat = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth:0.06, bevelEnabled:false, curveSegments:48 }), mat.woodLight);
+  seat.rotation.x = -Math.PI / 2; seat.position.set(TRX, 0.42, TRZ); seat.castShadow = seat.receiveShadow = true; scene.add(seat);
+  for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; box(0.08, 0.42, 0.3, mat.woodDark, TRX + Math.cos(a) * 1.62, 0, TRZ + Math.sin(a) * 1.62).rotation.y = -a; }
+}
+// existing bamboo frame with orchids
+box(3.2, 0.07, 0.07, mat.woodLight, TRX, 2.5, TRZ - 0.2);
+[-1.1, -0.4, 0.4, 1.1].forEach(dx => {
+  const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(TRX + dx, 2.5, TRZ - 0.2), new THREE.Vector3(TRX + dx, 1.95, TRZ - 0.2)]), mat.wire); scene.add(l);
+  cyl(0.13, 0.1, 0.18, mat.pot, TRX + dx, 1.8, TRZ - 0.2, 10);
+  sphere(0.2, mat.leafLight, TRX + dx, 2.05, TRZ - 0.2, 1.3, 0.6, 1.3);
+});
+
+// ---------- 3. tea platform by railing ----------
+const SX = 2.6, SZ = 1.3;
+box(1.8, 0.1, 1.4, mat.wood, SX, 0.32, SZ);
+for (const dx of [-0.82, 0.82]) for (const dz of [-0.62, 0.62]) box(0.1, 0.32, 0.1, mat.woodDark, SX + dx, 0, SZ + dz);
+box(0.75, 0.05, 0.5, mat.woodDark, SX, 0.62, SZ);
+for (const dx of [-0.32, 0.32]) for (const dz of [-0.2, 0.2]) box(0.05, 0.2, 0.05, mat.woodDark, SX + dx, 0.42, SZ + dz);
+sphere(0.08, mat.terracotta, SX, 0.73, SZ, 1, 0.8, 1);
+[[-0.15, 0.12], [0.15, 0.12], [-0.15, -0.12], [0.15, -0.12]].forEach(([dx, dz]) => cyl(0.03, 0.025, 0.04, M(0xf2eee4), SX + dx, 0.67, SZ + dz, 8));
+[[-0.6, 0.45], [0.6, 0.45], [0, -0.48], [-0.6, -0.4]].forEach(([dx, dz], i) => box(0.42, 0.07, 0.42, i % 2 ? mat.cushion2 : mat.cushion, SX + dx, 0.42, SZ + dz));
+
+// ---------- 4. BBQ counter with lean-to roof ----------
+const BX = 4.55, BZ0 = 3.0, BZ1 = 6.2;
+box(0.7, 0.85, BZ1 - BZ0, mat.brick, BX, 0, (BZ0 + BZ1) / 2);
+box(0.78, 0.05, BZ1 - BZ0 + 0.08, mat.slab, BX, 0.85, (BZ0 + BZ1) / 2);
+box(0.5, 0.06, 0.8, mat.metal, BX, 0.88, 3.7);                      // grill
+for (let z = 3.33; z <= 4.07; z += 0.06) box(0.48, 0.01, 0.01, M(0x888888, { metalness:0.8, roughness:0.3 }), BX, 0.95, z);
+box(0.4, 0.02, 0.45, M(0x9aa3a8, { metalness:0.8, roughness:0.2 }), BX, 0.89, 5.6);   // sink
+cyl(0.015, 0.015, 0.3, M(0xcccccc, { metalness:0.9, roughness:0.2 }), BX + 0.28, 0.9, 5.6, 8);
+// hood + chimney
+const hood = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.5, 4), mat.metal);
+hood.rotation.y = Math.PI / 4; hood.position.set(BX, 1.9, 3.7); hood.castShadow = true; scene.add(hood);
+cyl(0.09, 0.09, 1.1, mat.metal, BX, 2.1, 3.7, 10);
+// lean-to roof
+for (const z of [BZ0 - 0.1, BZ1 + 0.1]) box(0.1, 2.35, 0.1, mat.woodDark, 3.85, 0, z);
+const lean = box(1.6, 0.04, BZ1 - BZ0 + 0.6, mat.roofTin, 4.35, 0, (BZ0 + BZ1) / 2);
+lean.position.y = 2.5; lean.rotation.z = -0.2;
+// stools at bbq side
+[[3.6, 4.6], [3.6, 5.3]].forEach(([x, z]) => cyl(0.18, 0.15, 0.65, mat.woodLight, x, 0, z, 14));
+
+// ---------- 5. string lights ----------
+const bulbs = [], bulbLights = [];
+function strand(a, b, sag, n) {
+  const pts = [];
+  for (let i = 0; i <= 30; i++) { const t = i / 30; const p = a.clone().lerp(b, t); p.y -= sag * 4 * t * (1 - t); pts.push(p); }
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat.wire));
+  for (let i = 1; i < n; i++) { const p = pts[Math.round(i / n * 30)]; const s = sphere(0.045, mat.bulb, p.x, p.y - 0.06, p.z); s.castShadow = false; bulbs.push(s); }
+  const mid = pts[15].clone(); mid.y -= 0.2;
+  const pl = new THREE.PointLight(0xffc77a, 0, 7, 1.6); pl.position.copy(mid); scene.add(pl); bulbLights.push(pl);
+}
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+strand(V(PX1, PH, PZ0), V(TRX, 2.9, TRZ - 1.1), 0.35, 10);
+strand(V(PX1, PH, PZ1), V(3.85, 2.35, BZ0 - 0.1), 0.35, 12);
+strand(V(TRX + 0.5, 2.8, TRZ - 0.8), V(3.85, 2.35, BZ1 + 0.1), 0.3, 8);
+strand(V(PX0, PH, PZ0), V(PX1, PH, PZ0), 0.2, 8);
+const tableLight = new THREE.PointLight(0xffc77a, 0, 6, 1.5); tableLight.position.set(TX, 2.2, TZ); scene.add(tableLight); bulbLights.push(tableLight);
+
+// ---------- labels ----------
+const labelDefs = [
+  ['1', 'Giàn che + bàn tiệc', V(TX, 3.3, TZ)],
+  ['2', 'Ghế vòng gốc mít', V(TRX + 1.6, 1.1, TRZ + 0.6)],
+  ['3', 'Sập trà', V(SX, 1.2, SZ)],
+  ['4', 'Quầy nướng', V(BX - 0.3, 3.0, 4.6)],
+  ['', 'Hướng nhìn ra chùa ↓', V(-2, 1.6, -0.2)],
+  ['5', 'Sân sau', V(1.5, 0.9, 10.5)],
+  ['6', 'Rừng tre phấn', V(-3, 7.5, 17)],
+  ['8', 'Hồ nước', V(-4.6, 1.3, 10.2)],
+  ['7', 'Cầu thang từ bãi xe', V(5.6, -1.2, -3)],
+  ['', 'Taluy dốc thoải', V(-4, -1.6, -3)],
+];
+const labelBox = document.getElementById('labels');
+const labels = labelDefs.map(([n, t, p]) => { const el = document.createElement('div'); el.className = 'lbl'; el.innerHTML = (n ? `<b>${n}</b>` : '') + t; labelBox.appendChild(el); return { el, p }; });
+let showLabels = true;
+
+// ---------- views ----------
+const views = {
+  overview: { p: V(15, 11, 17), t: V(0, 0, 4) },
+  stairs:   { p: V(9, -2.5, -13), t: V(4, -1, 1) },
+  pond:     { p: V(-0.5, 2.6, 6.5), t: V(-4.6, 0.3, 10.8) },
+  table:    { p: V(-2.8, 1.2, 3.5), t: V(-1.5, 1.6, -12) },
+  tea:      { p: V(2.6, 1.05, 1.6), t: V(1.8, 1.0, -12) },
+  bbq:      { p: V(0.8, 1.65, 6.4), t: V(4.4, 0.9, 4.2) },
+  top:      { p: V(0.01, 30, 4.1), t: V(0, 0, 4) },
+};
+let anim = null;
+function goView(name) {
+  const v = views[name];
+  anim = { p0: camera.position.clone(), t0: controls.target.clone(), p1: v.p.clone(), t1: v.t.clone(), s: performance.now() };
+  document.querySelectorAll('#views button').forEach(b => b.classList.toggle('on', b.dataset.v === name));
+}
+document.querySelectorAll('#views button').forEach(b => b.addEventListener('click', () => goView(b.dataset.v)));
+
+// ---------- toggles ----------
+let night = false;
+function setNight(on) {
+  night = on;
+  scene.background.copy(on ? NIGHT_BG : DAY_BG);
+  scene.fog.color.copy(on ? NIGHT_BG : DAY_BG);
+  hemi.intensity = on ? 0.18 : 0.9;
+  sun.intensity = on ? 0.12 : 2.4;
+  sun.color.set(on ? 0x9fb4ff : 0xfff1d6);
+  mat.bulb.emissiveIntensity = on ? 3 : 0.2;
+  bulbLights.forEach(l => l.intensity = on ? 4 : 0);
+  document.getElementById('bNight').classList.toggle('on', on);
+}
+document.getElementById('bNight').onclick = () => setNight(!night);
+const bind = (id, fn) => { const b = document.getElementById(id); b.onclick = () => b.classList.toggle('on', fn()); };
+bind('bRoof', () => (polyRoof.visible = !polyRoof.visible));
+bind('bVine', () => (vines.visible = !vines.visible));
+bind('bLbl', () => { showLabels = !showLabels; labelBox.style.display = showLabels ? '' : 'none'; return showLabels; });
+const panel = document.getElementById('panel');
+document.getElementById('toggle').onclick = (e) => { panel.classList.toggle('collapsed'); e.target.textContent = panel.classList.contains('collapsed') ? '▸' : '▾'; };
+
+// ---------- double-click: move orbit centre to the clicked point ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+canvas.addEventListener('dblclick', (e) => {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(scene.children, true).find(h => h.object.visible && h.object.isMesh);
+  if (!hit) return;
+  const off = camera.position.clone().sub(controls.target);
+  const p1 = hit.point.clone().add(off.multiplyScalar(0.6));      // move closer while re-centring
+  anim = { p0: camera.position.clone(), t0: controls.target.clone(), p1, t1: hit.point.clone(), s: performance.now() };
+  document.querySelectorAll('#views button').forEach(b => b.classList.remove('on'));
+});
+
+// ---------- loop ----------
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+const tmp = new THREE.Vector3();
+function frame(now) {
+  if (anim) {
+    let k = Math.min(1, (now - anim.s) / 1100); k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    camera.position.lerpVectors(anim.p0, anim.p1, k); controls.target.lerpVectors(anim.t0, anim.t1, k);
+    if (k >= 1) anim = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  if (showLabels) {
+    for (const l of labels) {
+      tmp.copy(l.p).project(camera);
+      const vis = tmp.z < 1 && Math.abs(tmp.x) < 1.1 && Math.abs(tmp.y) < 1.1;
+      l.el.style.display = vis ? '' : 'none';
+      if (vis) { l.el.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px'; l.el.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px'; }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
