@@ -137,7 +137,7 @@ const SRGB = hex => B.Color3.FromInts((hex >> 16) & 255, (hex >> 8) & 255, hex &
 const DAY_BG = 0xbfdcef, NIGHT_BG = 0x141c2e;
 scene.clearColor = B.Color4.FromColor3(SRGB(DAY_BG), 1);
 scene.fogMode = B.Scene.FOGMODE_LINEAR;
-scene.fogStart = 45; scene.fogEnd = 160;
+scene.fogStart = 70; scene.fogEnd = 280;
 scene.fogColor = LIN(0xe4eef2);
 
 // ---------- image processing: filmic tone mapping, a bit of contrast ----------
